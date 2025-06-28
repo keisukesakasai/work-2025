@@ -1,0 +1,78 @@
+services:
+  # NodeJS Server with OpenTelemetry Injector
+  nodejs-server:
+    build:
+      context: ./app/nodejs
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+    depends_on:
+      - otel-collector
+    networks:
+      - otel-demo
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Java Load Generator (replaces the Node.js load generator)
+  java-load-generator:
+    build:
+      context: ./app/java
+      dockerfile: Dockerfile
+    environment:
+      - SERVER_URL=http://nodejs-server:3000
+      - REQUEST_INTERVAL=3000
+      - CONCURRENT_REQUESTS=2
+    depends_on:
+      - nodejs-server
+      - otel-collector
+    networks:
+      - otel-demo
+    restart: unless-stopped
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 15s
+
+  # OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otelcol-contrib/otel-collector-config.yaml"]
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/otel-collector-config.yaml
+    ports:
+      - "1888:1888"   # pprof extension
+      - "8888:8888"   # Prometheus metrics exposed by the collector
+      - "8889:8889"   # Prometheus exporter metrics
+      - "13133:13133" # health_check extension
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "55679:55679" # zpages extension
+    depends_on:
+      - jaeger
+    networks:
+      - otel-demo
+    restart: unless-stopped
+
+  # Jaeger
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686" # Jaeger UI
+      - "14250:14250" # gRPC
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - LOG_LEVEL=debug
+    networks:
+      - otel-demo
+    restart: unless-stopped
+
+networks:
+  otel-demo:
+    driver: bridge 

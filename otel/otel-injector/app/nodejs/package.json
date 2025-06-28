@@ -1,0 +1,21 @@
+{
+  "name": "otel-injector-demo",
+  "version": "1.0.0",
+  "description": "OpenTelemetry Injector Demo with Node.js",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --require ./tracing.js server.js",
+    "dev": "node --require ./tracing.js server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/sdk-node": "^0.202.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.46.1",
+    "@opentelemetry/exporter-trace-otlp-grpc": "^0.202.0"
+  },
+  "keywords": ["opentelemetry", "nodejs", "demo"],
+  "author": "Demo",
+  "license": "MIT"
+} 
